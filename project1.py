@@ -8,6 +8,7 @@ class Process(object):
                                                                    info[1:])
         self.state = 'READY'
         self.end_t = -1
+        self.original_num_bursts = self.num_bursts
 
 
 # return the string of the current items in queue
@@ -59,12 +60,13 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
 
 
 def write_stat(output, status):
-    output.write('-- average CPU burst time: %.2f ms\n'
+    output.write('-- average CPU burst time: {:.2f} ms\n'
                  '-- average wait time:  ms\n'
-                 '-- average turnaround time:  ms\n'
+                 '-- average turnaround time: ms\n'
                  '-- total number of context switches: \n'
-                 '-- total number of preemptions: ' % (
-                     sum(status[0]) / float(len(status[0]))))
+                 '-- total number of preemption: '.format(
+                     status[0] / float(status[1]),
+                     ))
 
 
 if __name__ == "__main__":
@@ -90,9 +92,9 @@ if __name__ == "__main__":
     end_t = -1
     running_p = None
 
-    # [0:cpu_burst, 1:wait_time, 2:turn_around_time
-    # 3[0]:context_switches, 3[1]: preemption]
-    stat = [[], [], [], []]
+    # [0:cpu_burst, 2:wait_time, 4:turn_around_time
+    #  6:context_switches, 7: preemption]
+    stat = [0] * 8
 
     outfile.write('Algorithm FCFS')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
@@ -106,7 +108,8 @@ if __name__ == "__main__":
             t += int(t_cs / 2)
             cpu_free = False
             running_p = ready_queue[0]
-            stat[0].append(running_p.burst_t)
+            stat[0] += running_p.burst_t
+            stat[1] += 1
             ready_queue.pop(0)
             print('time {}ms: Process {} started'
                   ' using the CPU {}'.format(t, running_p.proc_id
