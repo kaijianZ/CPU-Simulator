@@ -65,12 +65,12 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
 
 
 def write_stat(output, status):
-    output.write('-- average CPU burst time: %.2f ms\n'
+    output.write('-- average CPU burst time: {:.2f} ms\n'
                  '-- average wait time:  ms\n'
-                 '-- average turnaround time:  ms\n'
+                 '-- average turnaround time: {:.2f} ms\n'
                  '-- total number of context switches: \n'
-                 '-- total number of preemptions: ' % (
-                     sum(status[0]) / float(len(status[0]))))
+                 '-- total number of preemptions: '.format(
+                     sum(status[0]) / len(status[0]), 0))
 
 
 if __name__ == "__main__":
@@ -97,8 +97,8 @@ if __name__ == "__main__":
     running_p = None
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
-    # 3[0]:context_switches, 3[1]: preemption]
-    stat = [[], [], [], []]
+    # 3:context_switches, 4: preemption]
+    stat = [[], [], [], [], []]
 
     outfile.write('Algorithm FCFS')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
@@ -117,7 +117,6 @@ if __name__ == "__main__":
                                              , print_queue(ready_queue)))
             running_p.state = 'RUNNING'
             running_p.remaining_t = running_p.burst_t
-            start_t = -1
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
