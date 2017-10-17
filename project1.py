@@ -31,6 +31,7 @@ def arrive(processes, ready_q, t):
 
 
 def io_arrive(io_q, ready_q, t):
+    return_v = False
     while len(io_q) and io_q[0].end_t == t:
         process = io_q[0]
         process.state = 'READY'
@@ -39,12 +40,17 @@ def io_arrive(io_q, ready_q, t):
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , print_queue(ready_q)))
+        return_v = True
+    return return_v
 
 
 def finish_process(io_q, ready_q, t, running_p, t_cs):
-    print('time {}ms: Process {} completed a CPU burst; {} bursts'
-          ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts
-                             , print_queue(ready_q)))
+    def s(x):
+        return 's' if x != 1 else ''
+    print('time {}ms: Process {} completed a CPU burst; {} burst{}'
+          ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts,
+                             s(running_p.num_bursts),
+                             print_queue(ready_q)))
     if running_p.io_t != 0:
         io_q.append(running_p)
         running_p.end_t = int(t + running_p.io_t + t_cs / 2)
@@ -62,11 +68,10 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
 def write_stat(output, status):
     output.write('-- average CPU burst time: {:.2f} ms\n'
                  '-- average wait time:  ms\n'
-                 '-- average turnaround time: ms\n'
-                 '-- total number of context switches: \n'
-                 '-- total number of preemption: '.format(
-                     status[0] / float(status[1]),
-                     ))
+                 '-- average turnaround time:  ms\n'
+                 '-- total number of context switches: {:d}\n'
+                 '-- total number of preemptions: '.format(
+                     sum(status[0]) / len(status[0]), status[3]))
 
 
 if __name__ == "__main__":
@@ -92,9 +97,9 @@ if __name__ == "__main__":
     end_t = -1
     running_p = None
 
-    # [0:cpu_burst, 2:wait_time, 4:turn_around_time
-    #  6:context_switches, 7: preemption]
-    stat = [0] * 8
+    # [0:cpu_burst, 1:wait_time, 2:turn_around_time
+    # 3:context_switches, 4: preemption]
+    stat = [[], [], [], 0, []]
 
     outfile.write('Algorithm FCFS')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
@@ -102,21 +107,18 @@ if __name__ == "__main__":
     while len(processes):
         arrive(processes, ready_queue, t)
 
-        io_arrive(io_queue, ready_queue, t)
-
         if cpu_free and len(ready_queue):
+            stat[3] += 1
             t += int(t_cs / 2)
             cpu_free = False
             running_p = ready_queue[0]
-            stat[0] += running_p.burst_t
-            stat[1] += 1
+            stat[0].append(running_p.burst_t)
             ready_queue.pop(0)
             print('time {}ms: Process {} started'
                   ' using the CPU {}'.format(t, running_p.proc_id
                                              , print_queue(ready_queue)))
             running_p.state = 'RUNNING'
             running_p.remaining_t = running_p.burst_t
-            start_t = -1
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
@@ -129,11 +131,16 @@ if __name__ == "__main__":
             else:
                 finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
+            io_arrive(io_queue, ready_queue, t)
+
             t += int(t_cs / 2)
             cpu_free = True
             running_p = None
             end_t = -1
             continue
+        else:
+            if io_arrive(io_queue, ready_queue, t):
+                continue
 
         if running_p is not None:
             running_p.remaining_t -= 1
