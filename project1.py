@@ -9,12 +9,11 @@ class Process(object):
         self.ready_begin_t = self.arr_t
         self.state = 'READY'
         self.end_t = -1
+        self.original_num_bursts = self.num_bursts
+        self.last_arr_t = 0;
 
     def wait_t(self, t):
         return t - self.ready_begin_t
-
-    def turnaround_t(self, t):
-        return (t - self.arr_t) / self.num_bursts
 
 
 # return the string of the current items in queue
@@ -44,6 +43,8 @@ def io_arrive(io_q, ready_q, t):
         process.ready_begin_t = t
         ready_q.append(process)
         io_q.pop(0)
+        if process.last_arr_t == 0:
+            process.last_arr_t = t;
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , print_queue(ready_q)))
@@ -77,11 +78,10 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
 def write_stat(output, status):
     output.write('-- average CPU burst time: {:.2f} ms\n'
                  '-- average wait time: {:.2f} ms\n'
-                 '-- average turnaround time: {:.2f} ms\n'
+                 '-- average turnaround time: ms\n'
                  '-- total number of context switches: {:d}\n'
                  '-- total number of preemptions: '.format(
-        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]),
-        sum(status[1]) / len(status[1]), status[3]))
+        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]), status[3]))
 
 
 if __name__ == "__main__":
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
-    stat = [[], [], [], 0, []]
+    stat = [[], [], [], 0, 0]
 
     outfile.write('Algorithm FCFS')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
@@ -136,7 +136,6 @@ if __name__ == "__main__":
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
             if running_p.num_bursts == 0:
-                stat[2].append(running_p.turnaround_t(t))
                 print('time {}ms: Process {}'
                       ' terminated {}'.format(t, running_p.proc_id
                                               , print_queue(ready_queue)))
@@ -147,6 +146,8 @@ if __name__ == "__main__":
             io_arrive(io_queue, ready_queue, t)
 
             t += int(t_cs / 2)
+            stat[2].append(t-running_p.last_arr_t)
+            running_p.last_arr_t = 0;
             cpu_free = True
             running_p = None
             end_t = -1
