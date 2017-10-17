@@ -9,6 +9,7 @@ class Process(object):
         self.state = 'READY'
         self.end_t = -1
         self.original_num_bursts = self.num_bursts
+        self.last_arr_t = 0;
 
 
 # return the string of the current items in queue
@@ -37,6 +38,8 @@ def io_arrive(io_q, ready_q, t):
         process.state = 'READY'
         ready_q.append(process)
         io_q.pop(0)
+        if process.last_arr_t == 0:
+            process.last_arr_t = t;
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , print_queue(ready_q)))
@@ -68,10 +71,12 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
 def write_stat(output, status):
     output.write('-- average CPU burst time: {:.2f} ms\n'
                  '-- average wait time:  ms\n'
-                 '-- average turnaround time:  ms\n'
+                 '-- average turnaround time: {:.2f} ms\n'
                  '-- total number of context switches: {:d}\n'
                  '-- total number of preemptions: '.format(
-                     sum(status[0]) / len(status[0]), status[3]))
+                     sum(status[0]) / len(status[0]),
+                     sum(status[2]) / len(status[2]), status[3]
+                    ))
 
 
 if __name__ == "__main__":
@@ -99,7 +104,7 @@ if __name__ == "__main__":
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
-    stat = [[], [], [], 0, []]
+    stat = [[], [], [], 0, 0]
 
     outfile.write('Algorithm FCFS')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
@@ -134,6 +139,8 @@ if __name__ == "__main__":
             io_arrive(io_queue, ready_queue, t)
 
             t += int(t_cs / 2)
+            stat[2].append(t-running_p.last_arr_t)
+            running_p.last_arr_t = 0;
             cpu_free = True
             running_p = None
             end_t = -1
