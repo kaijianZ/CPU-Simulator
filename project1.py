@@ -12,12 +12,12 @@ class Process(object):
 
 # return the string of the current items in queue
 def print_queue(ready_q):
-    if (not ready_q):
+    if not ready_q:
         return '[Q <empty>]'
-    strq = '[Q'
+    str_q = '[Q'
     for process in ready_q:
-        strq += ' ' + process.proc_id
-    return strq + ']'
+        str_q += ' ' + process.proc_id
+    return str_q + ']'
 
 
 def arrive(processes, ready_q, t):
