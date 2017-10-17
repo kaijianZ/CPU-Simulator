@@ -63,75 +63,80 @@ def write_stat(output, status):
                  '-- average wait time:  ms\n'
                  '-- average turnaround time:  ms\n'
                  '-- total number of context switches: \n'
-                 '-- total number of preemptions: ' % (sum(status[0]) / float(len(status[0]))))
+                 '-- total number of preemptions: ' % (
+                     sum(status[0]) / float(len(status[0]))))
 
 
-file_name = sys.argv[1]
-with open(file_name, 'r') as f:
-    text = f.read().split('\n')
+if __name__ == "__main__":
+    file_name = sys.argv[1]
+    with open(file_name, 'r') as f:
+        text = f.read().split('\n')
 
-output_name = sys.argv[2]
-outfile = open(output_name, 'w')
+    output_name = sys.argv[2]
+    outfile = open(output_name, 'w')
 
-processes = []
-for i in text:
-    i.strip()
-    if len(i) and i[0] != '#':
-        processes.append(Process(i.split('|')))
+    processes = []
+    for i in text:
+        i.strip()
+        if len(i) and i[0] != '#':
+            processes.append(Process(i.split('|')))
 
-ready_queue = []
-io_queue = []
-cpu_free = True
-t = 0
-t_cs = 8
-start_t = -1
-end_t = -1
-running_p = None
-# [0:cpu_burst, 1:wait_time, 2:turn_around_time, 3[0]:context_switches, 3[1]:preemptions]
-stat = [[], [], [], []]
+    ready_queue = []
+    io_queue = []
+    cpu_free = True
+    t = 0
+    t_cs = 8
+    start_t = -1
+    end_t = -1
+    running_p = None
 
-outfile.write('Algorithm FCFS')
-print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(ready_queue)))
-while len(processes):
-    arrive(processes, ready_queue, t)
+    # [0:cpu_burst, 1:wait_time, 2:turn_around_time
+    # 3[0]:context_switches, 3[1]: preemption]
+    stat = [[], [], [], []]
 
-    io_arrive(io_queue, ready_queue, t)
+    outfile.write('Algorithm FCFS')
+    print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
+        ready_queue)))
+    while len(processes):
+        arrive(processes, ready_queue, t)
 
-    if cpu_free and len(ready_queue):
-        t += int(t_cs / 2)
-        cpu_free = False
-        running_p = ready_queue[0]
-        stat[0].append(running_p.burst_t)
-        ready_queue.pop(0)
-        print('time {}ms: Process {} started'
-              ' using the CPU {}'.format(t, running_p.proc_id
-                                         , print_queue(ready_queue)))
-        running_p.state = 'RUNNING'
-        running_p.remaining_t = running_p.burst_t
-        start_t = -1
+        io_arrive(io_queue, ready_queue, t)
 
-    if running_p is not None \
-            and running_p.remaining_t == 0:
-        running_p.num_bursts -= 1
-        if running_p.num_bursts == 0:
-            print('time {}ms: Process {}'
-                  ' terminated {}'.format(t, running_p.proc_id
-                                          , print_queue(ready_queue)))
-            processes.remove(running_p)
-        else:
-            finish_process(io_queue, ready_queue, t, running_p, t_cs)
+        if cpu_free and len(ready_queue):
+            t += int(t_cs / 2)
+            cpu_free = False
+            running_p = ready_queue[0]
+            stat[0].append(running_p.burst_t)
+            ready_queue.pop(0)
+            print('time {}ms: Process {} started'
+                  ' using the CPU {}'.format(t, running_p.proc_id
+                                             , print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
+            running_p.remaining_t = running_p.burst_t
+            start_t = -1
 
-        t += int(t_cs / 2)
-        cpu_free = True
-        running_p = None
-        end_t = -1
-        continue
+        if running_p is not None \
+                and running_p.remaining_t == 0:
+            running_p.num_bursts -= 1
+            if running_p.num_bursts == 0:
+                print('time {}ms: Process {}'
+                      ' terminated {}'.format(t, running_p.proc_id
+                                              , print_queue(ready_queue)))
+                processes.remove(running_p)
+            else:
+                finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
-    if running_p is not None:
-        running_p.remaining_t -= 1
-    t += 1
-print('time {}ms: Simulator ended for FCFS'.format(t))
-print(stat)
-write_stat(outfile, stat)
-# start running SRT
+            t += int(t_cs / 2)
+            cpu_free = True
+            running_p = None
+            end_t = -1
+            continue
 
+        if running_p is not None:
+            running_p.remaining_t -= 1
+        t += 1
+
+    print('time {}ms: Simulator ended for FCFS'.format(t))
+    print(stat)
+    write_stat(outfile, stat)
+    # start running SRT
