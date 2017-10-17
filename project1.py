@@ -9,7 +9,7 @@ class Process(object):
         self.state = 'READY'
         self.end_t = -1
         self.original_num_bursts = self.num_bursts
-        self.last_arr_t = 0;
+        self.last_arr_t = 0
 
 
 # return the string of the current items in queue
@@ -36,10 +36,10 @@ def io_arrive(io_q, ready_q, t):
     while len(io_q) and io_q[0].end_t == t:
         process = io_q[0]
         process.state = 'READY'
+        if process.last_arr_t == 0:
+            process.last_arr_t = t
         ready_q.append(process)
         io_q.pop(0)
-        if process.last_arr_t == 0:
-            process.last_arr_t = t;
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , print_queue(ready_q)))
