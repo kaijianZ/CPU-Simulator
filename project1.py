@@ -30,6 +30,7 @@ def arrive(processes, ready_q, t):
 
 
 def io_arrive(io_q, ready_q, t):
+    return_v = False
     while len(io_q) and io_q[0].end_t == t:
         process = io_q[0]
         process.state = 'READY'
@@ -38,12 +39,17 @@ def io_arrive(io_q, ready_q, t):
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , print_queue(ready_q)))
+        return_v = True
+    return return_v
 
 
 def finish_process(io_q, ready_q, t, running_p, t_cs):
-    print('time {}ms: Process {} completed a CPU burst; {} bursts'
-          ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts
-                             , print_queue(ready_q)))
+    def s(x):
+        return 's' if x != 1 else ''
+    print('time {}ms: Process {} completed a CPU burst; {} burst{}'
+          ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts,
+                             s(running_p.num_bursts),
+                             print_queue(ready_q)))
     if running_p.io_t != 0:
         io_q.append(running_p)
         running_p.end_t = int(t + running_p.io_t + t_cs / 2)
@@ -100,8 +106,6 @@ if __name__ == "__main__":
     while len(processes):
         arrive(processes, ready_queue, t)
 
-        io_arrive(io_queue, ready_queue, t)
-
         if cpu_free and len(ready_queue):
             t += int(t_cs / 2)
             cpu_free = False
@@ -126,11 +130,16 @@ if __name__ == "__main__":
             else:
                 finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
+            io_arrive(io_queue, ready_queue, t)
+
             t += int(t_cs / 2)
             cpu_free = True
             running_p = None
             end_t = -1
             continue
+        else:
+            if io_arrive(io_queue, ready_queue, t):
+                continue
 
         if running_p is not None:
             running_p.remaining_t -= 1
