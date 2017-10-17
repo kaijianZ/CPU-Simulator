@@ -6,10 +6,14 @@ class Process(object):
         self.proc_id = info[0]
         self.arr_t, self.burst_t, self.num_bursts, self.io_t = map(int,
                                                                    info[1:])
+        self.ready_begin_t = self.arr_t
         self.state = 'READY'
         self.end_t = -1
         self.original_num_bursts = self.num_bursts
         self.last_arr_t = 0
+
+    def wait_t(self, t):
+        return t - self.ready_begin_t
 
 
 # return the string of the current items in queue
@@ -38,6 +42,7 @@ def io_arrive(io_q, ready_q, t):
         process.state = 'READY'
         if process.last_arr_t == 0:
             process.last_arr_t = t
+        process.ready_begin_t = t
         ready_q.append(process)
         io_q.pop(0)
         print('time {}ms: Process {} completed I/O;'
@@ -50,6 +55,7 @@ def io_arrive(io_q, ready_q, t):
 def finish_process(io_q, ready_q, t, running_p, t_cs):
     def s(x):
         return 's' if x != 1 else ''
+
     print('time {}ms: Process {} completed a CPU burst; {} burst{}'
           ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts,
                              s(running_p.num_bursts),
@@ -64,19 +70,19 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
                                , print_queue(ready_q)))
         running_p.state = 'BLOCKED'
     else:
+        running_p.ready_begin_t = t
         running_p.state = 'READY'
         ready_q.append(running_p)
 
 
 def write_stat(output, status):
     output.write('-- average CPU burst time: {:.2f} ms\n'
-                 '-- average wait time:  ms\n'
-                 '-- average turnaround time: {:.2f} ms\n'
+                 '-- average wait time: {:.2f} ms\n'
+                 '-- average turnaround time: ms\n'
                  '-- total number of context switches: {:d}\n'
                  '-- total number of preemptions: '.format(
-                     sum(status[0]) / len(status[0]),
-                     sum(status[2]) / len(status[2]), status[3]
-                    ))
+        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]),
+        status[3]))
 
 
 if __name__ == "__main__":
@@ -113,12 +119,14 @@ if __name__ == "__main__":
         arrive(processes, ready_queue, t)
 
         if cpu_free and len(ready_queue):
-            stat[3] += 1
-            t += int(t_cs / 2)
-            cpu_free = False
             running_p = ready_queue[0]
             stat[0].append(running_p.burst_t)
             ready_queue.pop(0)
+            stat[1].append(running_p.wait_t(t))
+            stat[3] += 1
+            t += int(t_cs / 2)
+            cpu_free = False
+
             print('time {}ms: Process {} started'
                   ' using the CPU {}'.format(t, running_p.proc_id
                                              , print_queue(ready_queue)))
@@ -139,7 +147,7 @@ if __name__ == "__main__":
             io_arrive(io_queue, ready_queue, t)
 
             t += int(t_cs / 2)
-            stat[2].append(t-running_p.last_arr_t)
+            stat[2].append(t - running_p.last_arr_t)
             running_p.last_arr_t = 0;
             cpu_free = True
             running_p = None
