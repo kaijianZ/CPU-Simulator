@@ -10,7 +10,7 @@ class Process(object):
         self.state = 'READY'
         self.end_t = -1
         self.original_num_bursts = self.num_bursts
-        self.last_arr_t = 0;
+        self.last_arr_t = 0
 
     def wait_t(self, t):
         return t - self.ready_begin_t
@@ -81,7 +81,8 @@ def write_stat(output, status):
                  '-- average turnaround time: ms\n'
                  '-- total number of context switches: {:d}\n'
                  '-- total number of preemptions: '.format(
-        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]), status[3]))
+        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]),
+        status[3]))
 
 
 if __name__ == "__main__":
@@ -146,7 +147,7 @@ if __name__ == "__main__":
             io_arrive(io_queue, ready_queue, t)
 
             t += int(t_cs / 2)
-            stat[2].append(t-running_p.last_arr_t)
+            stat[2].append(t - running_p.last_arr_t)
             running_p.last_arr_t = 0;
             cpu_free = True
             running_p = None
