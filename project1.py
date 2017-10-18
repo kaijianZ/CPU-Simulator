@@ -169,7 +169,7 @@ if __name__ == "__main__":
     print('time {}ms: Simulator ended for FCFS'.format(t))
     print(stat)
     write_stat(outfile, stat)
-    # start running SRT
+'''    # start running SRT
 
     ready_queue = []
     io_queue = []
@@ -212,3 +212,4 @@ if __name__ == "__main__":
             running_p.state = 'RUNNING'
 
         break
+'''
