@@ -44,13 +44,15 @@ def arrive(processes, ready_q, t, srt=False):
                                           , print_queue(ready_q)))
 
 
-def io_arrive(io_q, ready_q, t):
+def io_arrive(io_q, ready_q, t, srt=False):
     return_v = False
     while len(io_q) and io_q[0].end_t == t:
         process = io_q[0]
         process.state = 'READY'
         process.ready_begin_t = t
         ready_q.append(process)
+        if srt:
+            ready_q.sort(key=lambda x: x.remaining_t)
         io_q.pop(0)
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
@@ -59,7 +61,7 @@ def io_arrive(io_q, ready_q, t):
     return return_v
 
 
-def finish_process(io_q, ready_q, t, running_p, t_cs):
+def finish_process(io_q, ready_q, t, running_p, t_cs, srt=False):
     def s(x):
         return 's' if x != 1 else ''
 
@@ -82,6 +84,8 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
         running_p.ready_begin_t = t
         running_p.state = 'READY'
         ready_q.append(running_p)
+        if srt:
+            ready_q.sort(key=lambda x: x.remaining_t)
 
 
 def write_stat(output, status):
