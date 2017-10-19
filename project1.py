@@ -12,11 +12,15 @@ class Process(object):
         self.remaining_t = self.burst_t
         self.burst = 0
         self.wait = 0
-        self.turnaround = 0
+        self.ready_begin_t = self.arr_t
 
-    def update_run(self):
-        if self.state == 'RUNNING':
-            self.burst += 1
+    def stat_update(self, stat):
+        stat[0].append(self.burst)
+        self.burst = 0
+        stat[1].append(self.wait)
+        self.wait = 0
+        stat[2].append(t - self.ready_begin_t + t_cs / 2)
+
 
 
 # return the string of the current items in queue
@@ -29,10 +33,12 @@ def print_queue(ready_q):
     return str_q + ']'
 
 
-def arrive(processes, ready_q, t):
+def arrive(processes, ready_q, t, srt=False):
     for process in processes:
         if process.arr_t == t:
             ready_q.append(process)
+            if srt:
+                ready_q.sort(key=lambda x: x.remaining_t)
             print('time {}ms: Process {} arrived and added to '
                   'ready queue {}'.format(t, process.proc_id
                                           , print_queue(ready_q)))
@@ -43,6 +49,7 @@ def io_arrive(io_q, ready_q, t):
     while len(io_q) and io_q[0].end_t == t:
         process = io_q[0]
         process.state = 'READY'
+        process.ready_begin_t = t
         ready_q.append(process)
         io_q.pop(0)
         print('time {}ms: Process {} completed I/O;'
@@ -55,6 +62,8 @@ def io_arrive(io_q, ready_q, t):
 def finish_process(io_q, ready_q, t, running_p, t_cs):
     def s(x):
         return 's' if x != 1 else ''
+
+    running_p.remaining_t = running_p.burst_t
 
     print('time {}ms: Process {} completed a CPU burst; {} burst{}'
           ' to go {}'.format(t, running_p.proc_id, running_p.num_bursts,
@@ -70,6 +79,7 @@ def finish_process(io_q, ready_q, t, running_p, t_cs):
                                , print_queue(ready_q)))
         running_p.state = 'BLOCKED'
     else:
+        running_p.ready_begin_t = t
         running_p.state = 'READY'
         ready_q.append(running_p)
 
@@ -85,9 +95,11 @@ def write_stat(output, status):
                                                                  status[3], status[4]))
 
 
-def update_wait(ready_q, t):
-    for proc in ready_q:
-        proc.wait += t
+def update(processes, ready_q, running_p):
+    if running_p is not None and running_p.state == 'RUNNING':
+        running_p.burst += 1
+    for process in ready_q:
+        process.wait += 1
 
 
 if __name__ == "__main__":
@@ -132,24 +144,18 @@ if __name__ == "__main__":
             running_p = ready_queue[0]
             ready_queue.pop(0)
             stat[3] += 1
-            t += int(t_cs / 2)
-            update_wait(ready_queue, t_cs / 2)
             cpu_free = False
+            start_t = t + int(t_cs / 2)
 
+        if start_t == t:
             print('time {}ms: Process {} started'
                   ' using the CPU {}'.format(t, running_p.proc_id
                                              , print_queue(ready_queue)))
             running_p.state = 'RUNNING'
-            running_p.remaining_t = running_p.burst_t
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
-            stat[0].append(running_p.burst)
-            running_p.burst = 0
-            stat[1].append(running_p.wait)
-            running_p.wait = 0
-            stat[2].append(running_p.turnaround)
-            running_p.turnaround = 0
+            running_p.stat_update(stat)
             running_p.num_bursts -= 1
             if running_p.num_bursts == 0:
                 print('time {}ms: Process {}'
@@ -160,9 +166,12 @@ if __name__ == "__main__":
                 finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
             io_arrive(io_queue, ready_queue, t)
+            end_t = t + int(t_cs / 2)
+        else:
+            if io_arrive(io_queue, ready_queue, t):
+                continue
 
-            t += int(t_cs / 2)
-            update_wait(ready_queue, t_cs / 2)
+        if end_t == t:
             cpu_free = True
             running_p = None
             end_t = -1
@@ -171,15 +180,16 @@ if __name__ == "__main__":
             if io_arrive(io_queue, ready_queue, t):
                 continue
 
-        if running_p is not None:
-            running_p.update_run()
+        if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
-        if ready_queue:
-            update_wait(ready_queue, 1)
+        update(processes, ready_queue, running_p)
         t += 1
 
-    print('time {}ms: Simulator ended for FCFS'.format(t))
+    t += int(t_cs / 2) - 1
+
+    print('time {}ms: Simulator ended for FCFS\n'.format(t))
     write_stat(outfile, stat)
+    # start running SRT
 
     # start running RR
     del ready_queue[:]
@@ -189,6 +199,7 @@ if __name__ == "__main__":
     start_t = -1
     end_t = -1
     running_p = None
+    preemption = True
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
@@ -205,16 +216,17 @@ if __name__ == "__main__":
         if t - start_t == t_slice and running_p is not None:
             start_t = t
             if len(ready_queue):
+                preemption = True
                 stat[4] += 1
                 print('time {}ms: Time slice expired; process {} '
                       'preempted with {}ms to go {}'.format(t, running_p.proc_id, running_p.remaining_t,
                                                             print_queue(ready_queue)))
                 running_p.state = 'READY'
-                t += int(t_cs / 2)
-                update_wait(ready_queue, t_cs / 2)
                 ready_queue.append(running_p)
                 cpu_free = True
+                start_t = t + int(t_cs / 2)
             else:
+                preemption = False
                 print('time {}ms: Time slice expired; '
                       'no preemption because ready queue is empty {}'.format(t, print_queue(ready_queue)))
 
@@ -222,42 +234,41 @@ if __name__ == "__main__":
             running_p = ready_queue[0]
             ready_queue.pop(0)
             stat[3] += 1
-            t += int(t_cs / 2)
-            update_wait(ready_queue, t_cs / 2)
             cpu_free = False
+            if start_t > t:
+                start_t = start_t + int(t_cs / 2)
+            else:
+                start_t = t + int(t_cs / 2)
+
+        if start_t == t:
             if running_p.remaining_t == running_p.burst_t:
                 print('time {}ms: Process {} started'
                       ' using the CPU {}'.format(t, running_p.proc_id
                                                  , print_queue(ready_queue)))
-            else:
+            elif preemption:
                 print('time {}ms: Process {} started'
                       ' using the CPU with {}ms remaining {}'
                       .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
             running_p.state = 'RUNNING'
-            start_t = t
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
-            stat[0].append(running_p.burst)
-            running_p.burst = 0
-            stat[1].append(running_p.wait)
-            running_p.wait = 0
-            stat[2].append(running_p.turnaround)
-            running_p.turnaround = 0
+            running_p.stat_update(stat)
             if running_p.num_bursts == 0:
                 print('time {}ms: Process {}'
                       ' terminated {}'.format(t, running_p.proc_id
                                               , print_queue(ready_queue)))
                 processes_RR.remove(running_p)
             else:
-                running_p.remaining_t = running_p.burst_t
                 finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
             io_arrive(io_queue, ready_queue, t)
-
-            t += int(t_cs / 2)
-            update_wait(ready_queue, t_cs / 2)
+            end_t = t + int(t_cs / 2)
+        else:
+            if io_arrive(io_queue, ready_queue, t):
+                continue
+        if end_t == t:
             cpu_free = True
             running_p = None
             end_t = -1
@@ -265,13 +276,12 @@ if __name__ == "__main__":
         else:
             if io_arrive(io_queue, ready_queue, t):
                 continue
-
-        if running_p is not None:
-            running_p.update_run()
+        if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
-        if ready_queue:
-            update_wait(ready_queue, 1)
+        update(processes, ready_queue, running_p)
         t += 1
 
-    print('time {}ms: Simulator ended for RR '.format(t))
+    t += int(t_cs / 2) - 1
+
+    print('time {}ms: Simulator ended for RR'.format(t))
     write_stat(outfile, stat)
