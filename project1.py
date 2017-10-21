@@ -23,7 +23,7 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process = None):
+def print_queue(ready_q, process=None):
     print_q = ready_q.copy()
     if process is not None: print_q.remove(process)
     if not print_q:
@@ -40,16 +40,24 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
             ready_q.append(process)
             if srt:
                 ready_q.sort(key=lambda x: x.remaining_t)
-                if running_p is not None and process.remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                if running_p is not None and \
+                                process.remaining_t < running_p.remaining_t \
+                        and running_p.state == 'RUNNING' and process == ready_q[0]:
                     print('time {}ms: Process {} arrived '
-                          'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                          print_queue(ready_q, process)))
+                          'and will preempt {} {}'.format(t, process.proc_id,
+                                                          running_p.proc_id,
+                                                          print_queue(ready_q,
+                                                                      process)))
+                else:
+                    print('time {}ms: Process {} arrived and added to '
+                          'ready queue {}'.format(t, process.proc_id
+                                                  , print_queue(ready_q)))
                     stat[3] += 1
                     stat[4] += 1
-                    return
-            print('time {}ms: Process {} arrived and added to '
-                  'ready queue {}'.format(t, process.proc_id
-                                          , print_queue(ready_q)))
+            else:
+                print('time {}ms: Process {} arrived and added to '
+                      'ready queue {}'.format(t, process.proc_id
+                                              , print_queue(ready_q)))
 
 
 def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
@@ -64,16 +72,22 @@ def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
             io_q.pop(0)
             if running_p is not None and process.remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
                 print('time {}ms: Process {} completed I/O '
-                      'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                      print_queue(ready_q, process)))
+                      'and will preempt {} {}'.format(t, process.proc_id,
+                                                      running_p.proc_id,
+                                                      print_queue(ready_q,
+                                                                  process)))
+            else:
+                print('time {}ms: Process {} completed I/O;'
+                      ' added to ready queue {}'.format(t, process.proc_id
+                                                        , print_queue(ready_q)))
                 stat[3] += 1
                 stat[4] += 1
-                return True
+                return_v = True
         else:
             io_q.pop(0)
-        print('time {}ms: Process {} completed I/O;'
-              ' added to ready queue {}'.format(t, process.proc_id
-                                                , print_queue(ready_q)))
+            print('time {}ms: Process {} completed I/O;'
+                  ' added to ready queue {}'.format(t, process.proc_id
+                                                    , print_queue(ready_q)))
         return_v = True
     return return_v
 
@@ -110,10 +124,11 @@ def write_stat(output, status):
                  '-- average wait time: {:.2f} ms\n'
                  '-- average turnaround time: {:.2f} ms\n'
                  '-- total number of context switches: {:d}\n'
-                 '-- total number of preemptions: {:d}\n'.format(sum(status[0]) / len(status[0]),
-                                                                 sum(status[1]) / len(status[1]),
-                                                                 sum(status[2]) / len(status[2]),
-                                                                 status[3], status[4]))
+                 '-- total number of preemptions: {:d}\n'.format(
+        sum(status[0]) / len(status[0]),
+        sum(status[1]) / len(status[1]),
+        sum(status[2]) / len(status[2]),
+        status[3], status[4]))
 
 
 def update(ready_q, running_p):
@@ -255,7 +270,8 @@ if __name__ == "__main__":
             start_t = t + int(t_cs / 2)
 
         if running_p is not None and len(ready_queue) \
-                and ready_queue[0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                and ready_queue[
+                    0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
             ready_queue.append(running_p)
             running_p.state = 'READY'
             running_p = ready_queue.pop(0)
@@ -270,7 +286,8 @@ if __name__ == "__main__":
             else:
                 print('time {}ms: Process {} started'
                       ' using the CPU with {}ms remaining {}'
-                      .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
+                      .format(t, running_p.proc_id, running_p.remaining_t,
+                              print_queue(ready_queue)))
             running_p.state = 'RUNNING'
 
         if end_t == t:
@@ -311,12 +328,16 @@ if __name__ == "__main__":
         # preemption for RR
         if t - start_t == t_slice and running_p is not None:
             start_t = t
-            if len(ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+            if len(
+                    ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 preemption = True
                 stat[4] += 1
                 print('time {}ms: Time slice expired; process {} '
-                      'preempted with {}ms to go {}'.format(t, running_p.proc_id, running_p.remaining_t,
-                                                            print_queue(ready_queue)))
+                      'preempted with {}ms to go {}'.format(t,
+                                                            running_p.proc_id,
+                                                            running_p.remaining_t,
+                                                            print_queue(
+                                                                ready_queue)))
                 running_p.state = 'READY'
                 ready_queue.append(running_p)
                 cpu_free = True
@@ -324,7 +345,9 @@ if __name__ == "__main__":
             elif running_p.remaining_t > 0:
                 preemption = False
                 print('time {}ms: Time slice expired; '
-                      'no preemption because ready queue is empty {}'.format(t, print_queue(ready_queue)))
+                      'no preemption because ready queue is empty {}'.format(t,
+                                                                             print_queue(
+                                                                                 ready_queue)))
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
@@ -346,7 +369,6 @@ if __name__ == "__main__":
 
         arrive(processes_RR, ready_queue, t)
 
-
         if cpu_free and len(ready_queue):
             running_p = ready_queue[0]
             ready_queue.pop(0)
@@ -365,7 +387,8 @@ if __name__ == "__main__":
             elif preemption and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 print('time {}ms: Process {} started'
                       ' using the CPU with {}ms remaining {}'
-                      .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
+                      .format(t, running_p.proc_id, running_p.remaining_t,
+                              print_queue(ready_queue)))
             running_p.state = 'RUNNING'
 
         if end_t == t:
@@ -373,6 +396,7 @@ if __name__ == "__main__":
             running_p = None
             end_t = -1
             continue
+
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
         update(ready_queue, running_p)
