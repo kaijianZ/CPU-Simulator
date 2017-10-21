@@ -57,7 +57,6 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                                                           running_p.proc_id,
                                                           print_queue(ready_q,
                                                                       process)))
-                    stat[3] += 1
                     stat[4] += 1
                 else:
                     print('time {}ms: Process {} arrived and added to '
@@ -85,7 +84,6 @@ def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
                                                       running_p.proc_id,
                                                       print_queue(ready_q,
                                                                   process)))
-                stat[3] += 1
                 stat[4] += 1
             else:
                 print('time {}ms: Process {} completed I/O;'
@@ -185,7 +183,7 @@ if __name__ == "__main__":
     # 3:context_switches, 4: preemption]
     stat = [[], [], [], 0, 0]
 
-    outfile.write('Algorithm FCFS')
+    outfile.write('Algorithm FCFS\n')
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
         ready_queue)))
     while len(processes):
@@ -251,7 +249,7 @@ if __name__ == "__main__":
     # 3:context_switches, 4: preemption]
     del stat[:]
     stat = [[], [], [], 0, 0]
-    outfile.write('Algorithm SRT')
+    outfile.write('Algorithm SRT\n')
     print('time {}ms: Simulator started for SRT {}'.format(t, print_queue(
         ready_queue)))
 
@@ -298,7 +296,7 @@ if __name__ == "__main__":
         if running_p is not None and len(ready_queue) \
                 and ready_queue[
                     0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
-            running_p.wait -= int(t_cs / 2)
+            running_p.wait -= t_cs
             ready_queue.append(running_p)
             running_p.state = 'READY'
             ready_queue.sort(key=lambda x: x.remaining_t)
@@ -336,7 +334,7 @@ if __name__ == "__main__":
     del stat[:]
     stat = [[], [], [], 0, 0]
 
-    outfile.write('Algorithm RR')
+    outfile.write('Algorithm RR\n')
     print('time {}ms: Simulator started for RR {}'.format(t, print_queue(
         ready_queue)))
     while len(processes_RR):
