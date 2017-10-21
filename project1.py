@@ -23,7 +23,7 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process=None):
+def print_queue(ready_q, process = None):
     print_q = ready_q.copy()
     if process is not None: print_q.remove(process)
     if not print_q:
@@ -270,8 +270,7 @@ if __name__ == "__main__":
             start_t = t + int(t_cs / 2)
 
         if running_p is not None and len(ready_queue) \
-                and ready_queue[
-                    0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                and ready_queue[0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
             ready_queue.append(running_p)
             running_p.state = 'READY'
             running_p = ready_queue.pop(0)
@@ -286,8 +285,7 @@ if __name__ == "__main__":
             else:
                 print('time {}ms: Process {} started'
                       ' using the CPU with {}ms remaining {}'
-                      .format(t, running_p.proc_id, running_p.remaining_t,
-                              print_queue(ready_queue)))
+                      .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
             running_p.state = 'RUNNING'
 
         if end_t == t:
@@ -326,10 +324,9 @@ if __name__ == "__main__":
     while len(processes_RR):
 
         # preemption for RR
-        if t - start_t == t_slice and running_p is not None:
-            start_t = t
-            if len(
-                    ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+        if (t - start_t == t_slice or t - slice_start == t_slice) and running_p is not None:
+            slice_start = t
+            if len(ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 preemption = True
                 stat[4] += 1
                 print('time {}ms: Time slice expired; process {} '
@@ -378,6 +375,7 @@ if __name__ == "__main__":
                 start_t = start_t + int(t_cs / 2)
             else:
                 start_t = t + int(t_cs / 2)
+            slice_start = start_t
 
         if start_t == t:
             if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
