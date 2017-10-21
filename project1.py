@@ -25,7 +25,8 @@ class Process(object):
 # return the string of the current items in queue
 def print_queue(ready_q, process=None):
     print_q = ready_q.copy()
-    if process is not None: print_q.remove(process)
+    if process is not None:
+        print_q.remove(process)
     if not print_q:
         return '[Q <empty>]'
     str_q = '[Q'
@@ -285,6 +286,7 @@ if __name__ == "__main__":
         if running_p is not None and len(ready_queue) \
                 and ready_queue[
                     0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+            running_p.wait -= int(t_cs / 2)
             ready_queue.append(running_p)
             running_p.state = 'READY'
             running_p = ready_queue.pop(0)
