@@ -30,14 +30,11 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process=None):
-    print_q = ready_q.copy()
-    if process is not None:
-        print_q.remove(process)
-    if not print_q:
+def print_queue(ready_q):
+    if not ready_q:
         return '[Q <empty>]'
     str_q = '[Q'
-    for process in print_q:
+    for process in ready_q:
         str_q += ' ' + process.proc_id
     return str_q + ']'
 
@@ -55,8 +52,7 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                     print('time {}ms: Process {} arrived '
                           'and will preempt {} {}'.format(t, process.proc_id,
                                                           running_p.proc_id,
-                                                          print_queue(ready_q,
-                                                                      process)))
+                                                          print_queue(ready_q[1:])))
                     stat[4] += 1
                 else:
                     print('time {}ms: Process {} arrived and added to '
@@ -86,8 +82,8 @@ def io_arrive(io_queue, ready_q, t, srt=False, running_p=None, stat=None):
                 print('time {}ms: Process {} completed I/O '
                       'and will preempt {} {}'.format(t, process.proc_id,
                                                       running_p.proc_id,
-                                                      print_queue(ready_q,
-                                                                  process)))
+                                                      print_queue(ready_q[1:])))
+
                 stat[4] += 1
             else:
                 print('time {}ms: Process {} completed I/O;'
@@ -100,6 +96,8 @@ def io_arrive(io_queue, ready_q, t, srt=False, running_p=None, stat=None):
                   ' added to ready queue {}'.format(t, process.proc_id
                                                     , print_queue(ready_q)))
         return_v = True
+        # if srt:
+        #    ready_q.sort(key=lambda x: x.remaining_t)
     return return_v
 
 
@@ -188,58 +186,58 @@ if __name__ == "__main__":
     # 3:context_switches, 4: preemption]
     stat = [[], [], [], 0, 0]
 
-    outfile.write('Algorithm FCFS\n')
-    print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
-        ready_queue)))
-    while len(processes):
-        if start_t == t and running_p.state != "RUNNING":
-            print('time {}ms: Process {} started'
-                  ' using the CPU {}'.format(t, running_p.proc_id
-                                             , print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
-
-        if running_p is not None \
-                and running_p.remaining_t == 0:
-            running_p.stat_update(stat)
-            running_p.num_bursts -= 1
-            if running_p.num_bursts == 0:
-                print('time {}ms: Process {}'
-                      ' terminated {}'.format(t, running_p.proc_id
-                                              , print_queue(ready_queue)))
-                processes.remove(running_p)
-            else:
-                finish_process(io_queue, ready_queue, t, running_p, t_cs)
-
-            io_arrive(io_queue, ready_queue, t)
-            end_t = t + int(t_cs / 2)
-        else:
-            if io_arrive(io_queue, ready_queue, t):
-                continue
-
-        arrive(processes, ready_queue, t)
-
-        if cpu_free and len(ready_queue):
-            running_p = ready_queue[0]
-            ready_queue.pop(0)
-            stat[3] += 1
-            cpu_free = False
-            start_t = t + int(t_cs / 2)
-
-        if end_t == t:
-            cpu_free = True
-            running_p = None
-            end_t = -1
-            continue
-
-        if running_p is not None and running_p.state == 'RUNNING':
-            running_p.remaining_t -= 1
-        update(ready_queue, running_p)
-        t += 1
-
-    t += int(t_cs / 2) - 1
-
-    print('time {}ms: Simulator ended for FCFS\n'.format(t))
-    write_stat(outfile, stat)
+    # outfile.write('Algorithm FCFS\n')
+    # print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
+    #     ready_queue)))
+    # while len(processes):
+    #     if start_t == t and running_p.state != "RUNNING":
+    #         print('time {}ms: Process {} started'
+    #               ' using the CPU {}'.format(t, running_p.proc_id
+    #                                          , print_queue(ready_queue)))
+    #         running_p.state = 'RUNNING'
+    #
+    #     if running_p is not None \
+    #             and running_p.remaining_t == 0:
+    #         running_p.stat_update(stat)
+    #         running_p.num_bursts -= 1
+    #         if running_p.num_bursts == 0:
+    #             print('time {}ms: Process {}'
+    #                   ' terminated {}'.format(t, running_p.proc_id
+    #                                           , print_queue(ready_queue)))
+    #             processes.remove(running_p)
+    #         else:
+    #             finish_process(io_queue, ready_queue, t, running_p, t_cs)
+    #
+    #         io_arrive(io_queue, ready_queue, t)
+    #         end_t = t + int(t_cs / 2)
+    #     else:
+    #         if io_arrive(io_queue, ready_queue, t):
+    #             continue
+    #
+    #     arrive(processes, ready_queue, t)
+    #
+    #     if cpu_free and len(ready_queue):
+    #         running_p = ready_queue[0]
+    #         ready_queue.pop(0)
+    #         stat[3] += 1
+    #         cpu_free = False
+    #         start_t = t + int(t_cs / 2)
+    #
+    #     if end_t == t:
+    #         cpu_free = True
+    #         running_p = None
+    #         end_t = -1
+    #         continue
+    #
+    #     if running_p is not None and running_p.state == 'RUNNING':
+    #         running_p.remaining_t -= 1
+    #     update(ready_queue, running_p)
+    #     t += 1
+    #
+    # t += int(t_cs / 2) - 1
+    #
+    # print('time {}ms: Simulator ended for FCFS\n'.format(t))
+    # write_stat(outfile, stat)
 
     # start running SRT
     del ready_queue[:]
@@ -249,6 +247,7 @@ if __name__ == "__main__":
     start_t = -1
     end_t = -1
     running_p = None
+    next_p = NO
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
