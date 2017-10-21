@@ -1,6 +1,10 @@
 # Yanlin Zhu
 # zhuy11
 
+# Kaijian Zhong
+# zhongk
+
+
 import sys
 
 
@@ -242,7 +246,6 @@ if __name__ == "__main__":
     start_t = -1
     end_t = -1
     running_p = None
-    preemption = True
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
@@ -298,9 +301,8 @@ if __name__ == "__main__":
             running_p.wait -= int(t_cs / 2)
             ready_queue.append(running_p)
             running_p.state = 'READY'
-            running_p = ready_queue.pop(0)
             ready_queue.sort(key=lambda x: x.remaining_t)
-            start_t = t + t_cs
+            end_t = t + int(t_cs / 2)
 
         if end_t == t:
             running_p = None
