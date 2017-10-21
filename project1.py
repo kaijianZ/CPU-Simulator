@@ -30,10 +30,7 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process=None):
-    print_q = ready_q.copy()
-    if process is not None:
-        print_q.remove(process)
+def print_queue(print_q):
     if not print_q:
         return '[Q <empty>]'
     str_q = '[Q'
@@ -50,13 +47,11 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                 ready_q.sort(key=lambda x: x.remaining_t)
                 if running_p is not None and \
                                 process.remaining_t < running_p.remaining_t \
-                        and running_p.state == 'RUNNING' and process == ready_q[
-                    0]:
+                        and running_p.state == 'RUNNING' and process == ready_q[0]:
                     print('time {}ms: Process {} arrived '
                           'and will preempt {} {}'.format(t, process.proc_id,
                                                           running_p.proc_id,
-                                                          print_queue(ready_q,
-                                                                      process)))
+                                                          print_queue(ready_q)))
                     stat[4] += 1
                 else:
                     print('time {}ms: Process {} arrived and added to '
@@ -86,8 +81,7 @@ def io_arrive(io_queue, ready_q, t, srt=False, running_p=None, stat=None):
                 print('time {}ms: Process {} completed I/O '
                       'and will preempt {} {}'.format(t, process.proc_id,
                                                       running_p.proc_id,
-                                                      print_queue(ready_q,
-                                                                  process)))
+                                                      print_queue(ready_q)))
                 stat[4] += 1
             else:
                 print('time {}ms: Process {} completed I/O;'
@@ -291,7 +285,9 @@ if __name__ == "__main__":
             if io_arrive(io_queue, ready_queue, t, True, running_p, stat):
                 continue
 
-        arrive(processes_SRT, ready_queue, t, True, running_p, stat)
+        proc = arrive(processes_SRT, ready_queue, t, True, running_p, stat)
+        if proc is not None:
+            running_p = proc
 
         if running_p is None and len(ready_queue):
             running_p = ready_queue.pop(0)
