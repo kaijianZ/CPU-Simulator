@@ -1,3 +1,6 @@
+# Yanlin Zhu
+# zhuy11
+
 import sys
 
 
@@ -141,6 +144,9 @@ def update(ready_q, running_p):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        sys.stderr.write('ERROR: Invalid arguments\nUSAGE: ./a.out <input-file> <stats-output-file>')
+        exit(1)
     file_name = sys.argv[1]
     with open(file_name, 'r') as f:
         text = f.read().split('\n')
@@ -154,6 +160,9 @@ if __name__ == "__main__":
     for i in text:
         i.strip()
         if len(i) and i[0] != '#':
+            if len(i.split('|')) != 5:
+                sys.stderr.write('ERROR: Invalid input file format')
+                exit(1)
             processes.append(Process(i.split('|')))
             processes_SRT.append(Process(i.split('|')))
             processes_RR.append(Process(i.split('|')))
