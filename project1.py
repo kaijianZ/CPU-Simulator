@@ -23,7 +23,9 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(print_q):
+def print_queue(ready_q, process = None):
+    print_q = ready_q.copy()
+    if process is not None: print_q.remove(process)
     if not print_q:
         return '[Q <empty>]'
     str_q = '[Q'
@@ -37,16 +39,14 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
         if process.arr_t == t:
             ready_q.append(process)
             if srt:
-                before_sort = ready_q[0]
                 ready_q.sort(key=lambda x: x.remaining_t)
-                if running_p is not None:
-                    if process.burst_t < running_p.remaining_t:
-                        print('time {}ms: Process {} arrived '
-                              'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                              print_queue(ready_q)))
-                        stat[3] += 1
-                        stat[4] += 1
-                        return
+                if running_p is not None and process.remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                    print('time {}ms: Process {} arrived '
+                          'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
+                                                          print_queue(ready_q, process)))
+                    stat[3] += 1
+                    stat[4] += 1
+                    return
             print('time {}ms: Process {} arrived and added to '
                   'ready queue {}'.format(t, process.proc_id
                                           , print_queue(ready_q)))
@@ -62,14 +62,13 @@ def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
         if srt:
             ready_q.sort(key=lambda x: x.remaining_t)
             io_q.pop(0)
-            if running_p is not None:
-                if ready_q[0] != running_p:
-                    print('time {}ms: Process {} completed I/O '
-                          'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                          print_queue(ready_q)))
-                    stat[3] += 1
-                    stat[4] += 1
-                    return True
+            if running_p is not None and process.remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                print('time {}ms: Process {} completed I/O '
+                      'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
+                                                      print_queue(ready_q, process)))
+                stat[3] += 1
+                stat[4] += 1
+                return True
         else:
             io_q.pop(0)
         print('time {}ms: Process {} completed I/O;'
@@ -308,6 +307,25 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for RR {}'.format(t, print_queue(
         ready_queue)))
     while len(processes_RR):
+
+        # preemption for RR
+        if t - start_t == t_slice and running_p is not None:
+            start_t = t
+            if len(ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+                preemption = True
+                stat[4] += 1
+                print('time {}ms: Time slice expired; process {} '
+                      'preempted with {}ms to go {}'.format(t, running_p.proc_id, running_p.remaining_t,
+                                                            print_queue(ready_queue)))
+                running_p.state = 'READY'
+                ready_queue.append(running_p)
+                cpu_free = True
+                start_t = t + int(t_cs / 2)
+            elif running_p.remaining_t > 0:
+                preemption = False
+                print('time {}ms: Time slice expired; '
+                      'no preemption because ready queue is empty {}'.format(t, print_queue(ready_queue)))
+
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
@@ -328,23 +346,6 @@ if __name__ == "__main__":
 
         arrive(processes_RR, ready_queue, t)
 
-        # preemption for RR
-        if t - start_t == t_slice and running_p is not None:
-            start_t = t
-            if len(ready_queue) and running_p.remaining_t > 0:
-                preemption = True
-                stat[4] += 1
-                print('time {}ms: Time slice expired; process {} '
-                      'preempted with {}ms to go {}'.format(t, running_p.proc_id, running_p.remaining_t,
-                                                            print_queue(ready_queue)))
-                running_p.state = 'READY'
-                ready_queue.append(running_p)
-                cpu_free = True
-                start_t = t + int(t_cs / 2)
-            elif running_p.remaining_t > 0:
-                preemption = False
-                print('time {}ms: Time slice expired; '
-                      'no preemption because ready queue is empty {}'.format(t, print_queue(ready_queue)))
 
         if cpu_free and len(ready_queue):
             running_p = ready_queue[0]
@@ -357,11 +358,11 @@ if __name__ == "__main__":
                 start_t = t + int(t_cs / 2)
 
         if start_t == t:
-            if running_p.remaining_t == running_p.burst_t:
+            if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
                 print('time {}ms: Process {} started'
                       ' using the CPU {}'.format(t, running_p.proc_id
                                                  , print_queue(ready_queue)))
-            elif preemption and running_p.remaining_t > 0:
+            elif preemption and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 print('time {}ms: Process {} started'
                       ' using the CPU with {}ms remaining {}'
                       .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
