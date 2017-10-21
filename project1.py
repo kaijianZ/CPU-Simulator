@@ -23,9 +23,7 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process=None):
-    print_q = ready_q.copy()
-    if process in print_q: print_q.remove(process)
+def print_queue(print_q):
     if not print_q:
         return '[Q <empty>]'
     str_q = '[Q'
@@ -45,7 +43,7 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                     if process.burst_t < running_p.remaining_t:
                         print('time {}ms: Process {} arrived '
                               'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                              print_queue(ready_q, process)))
+                                                              print_queue(ready_q)))
                         stat[3] += 1
                         stat[4] += 1
                         return
@@ -68,7 +66,7 @@ def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
                 if ready_q[0] != running_p:
                     print('time {}ms: Process {} completed I/O '
                           'and will preempt {} {}'.format(t, process.proc_id, running_p.proc_id,
-                                                          print_queue(ready_q, process)))
+                                                          print_queue(ready_q)))
                     stat[3] += 1
                     stat[4] += 1
                     return True
