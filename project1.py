@@ -73,7 +73,8 @@ def io_arrive(io_queue, ready_q, t, srt=False, running_p=None, stat=None):
     io_q = []
     while len(io_queue) and io_queue[0].end_t == t:
         io_q.append(io_queue.pop(0))
-    while len(sorted(io_q, key=lambda x: x.proc_id)):
+    io_q.sort(key=lambda x: x.proc_id)
+    while len(io_q):
         process = io_q[0]
         process.state = 'READY'
         process.ready_begin_t = t
