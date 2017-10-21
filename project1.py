@@ -23,7 +23,7 @@ class Process(object):
 
 
 # return the string of the current items in queue
-def print_queue(ready_q, process = None):
+def print_queue(ready_q, process=None):
     print_q = ready_q.copy()
     if process is not None: print_q.remove(process)
     if not print_q:
@@ -42,7 +42,8 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                 ready_q.sort(key=lambda x: x.remaining_t)
                 if running_p is not None and \
                                 process.remaining_t < running_p.remaining_t \
-                        and running_p.state == 'RUNNING' and process == ready_q[0]:
+                        and running_p.state == 'RUNNING' and process == ready_q[
+                    0]:
                     print('time {}ms: Process {} arrived '
                           'and will preempt {} {}'.format(t, process.proc_id,
                                                           running_p.proc_id,
@@ -174,6 +175,12 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
         ready_queue)))
     while len(processes):
+        if start_t == t and running_p.state != "RUNNING":
+            print('time {}ms: Process {} started'
+                  ' using the CPU {}'.format(t, running_p.proc_id
+                                             , print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
+
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.stat_update(stat)
@@ -200,12 +207,6 @@ if __name__ == "__main__":
             stat[3] += 1
             cpu_free = False
             start_t = t + int(t_cs / 2)
-
-        if start_t == t:
-            print('time {}ms: Process {} started'
-                  ' using the CPU {}'.format(t, running_p.proc_id
-                                             , print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
 
         if end_t == t:
             cpu_free = True
@@ -242,6 +243,18 @@ if __name__ == "__main__":
         ready_queue)))
 
     while len(processes_SRT):
+        if start_t == t and running_p.state != "RUNNING":
+            if running_p.remaining_t == running_p.burst_t:
+                print('time {}ms: Process {} started'
+                      ' using the CPU {}'.format(t, running_p.proc_id
+                                                 , print_queue(ready_queue)))
+            else:
+                print('time {}ms: Process {} started'
+                      ' using the CPU with {}ms remaining {}'
+                      .format(t, running_p.proc_id, running_p.remaining_t,
+                              print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
+
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
@@ -270,23 +283,13 @@ if __name__ == "__main__":
             start_t = t + int(t_cs / 2)
 
         if running_p is not None and len(ready_queue) \
-                and ready_queue[0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+                and ready_queue[
+                    0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
             ready_queue.append(running_p)
             running_p.state = 'READY'
             running_p = ready_queue.pop(0)
             ready_queue.sort(key=lambda x: x.remaining_t)
             start_t = t + t_cs
-
-        if start_t == t:
-            if running_p.remaining_t == running_p.burst_t:
-                print('time {}ms: Process {} started'
-                      ' using the CPU {}'.format(t, running_p.proc_id
-                                                 , print_queue(ready_queue)))
-            else:
-                print('time {}ms: Process {} started'
-                      ' using the CPU with {}ms remaining {}'
-                      .format(t, running_p.proc_id, running_p.remaining_t, print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
 
         if end_t == t:
             running_p = None
@@ -313,6 +316,7 @@ if __name__ == "__main__":
     end_t = -1
     running_p = None
     preemption = True
+    slice_start = -1
 
     # [0:cpu_burst, 1:wait_time, 2:turn_around_time
     # 3:context_switches, 4: preemption]
@@ -323,11 +327,24 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for RR {}'.format(t, print_queue(
         ready_queue)))
     while len(processes_RR):
+        if start_t == t and running_p.state != "RUNNING":
+            if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
+                print('time {}ms: Process {} started'
+                      ' using the CPU {}'.format(t, running_p.proc_id
+                                                 , print_queue(ready_queue)))
+            elif preemption and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+                print('time {}ms: Process {} started'
+                      ' using the CPU with {}ms remaining {}'
+                      .format(t, running_p.proc_id, running_p.remaining_t,
+                              print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
 
         # preemption for RR
-        if (t - start_t == t_slice or t - slice_start == t_slice) and running_p is not None:
+        if (
+                            t - start_t == t_slice or t - slice_start == t_slice) and running_p is not None:
             slice_start = t
-            if len(ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+            if len(
+                    ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 preemption = True
                 stat[4] += 1
                 print('time {}ms: Time slice expired; process {} '
@@ -377,18 +394,6 @@ if __name__ == "__main__":
             else:
                 start_t = t + int(t_cs / 2)
             slice_start = start_t
-
-        if start_t == t:
-            if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
-                print('time {}ms: Process {} started'
-                      ' using the CPU {}'.format(t, running_p.proc_id
-                                                 , print_queue(ready_queue)))
-            elif preemption and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
-                print('time {}ms: Process {} started'
-                      ' using the CPU with {}ms remaining {}'
-                      .format(t, running_p.proc_id, running_p.remaining_t,
-                              print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
 
         if end_t == t:
             cpu_free = True
