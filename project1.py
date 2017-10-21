@@ -43,7 +43,7 @@ def print_queue(ready_q, process=None):
 
 
 def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
-    for process in processes:
+    for process in sorted(processes, key=lambda x: x.proc_id):
         if process.arr_t == t:
             ready_q.append(process)
             if srt:
@@ -68,9 +68,12 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                                               , print_queue(ready_q)))
 
 
-def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
+def io_arrive(io_queue, ready_q, t, srt=False, running_p=None, stat=None):
     return_v = False
-    while len(io_q) and io_q[0].end_t == t:
+    io_q = []
+    while len(io_queue) and io_queue[0].end_t == t:
+        io_q.append(io_queue.pop(0))
+    while len(sorted(io_q, key=lambda x: x.proc_id)):
         process = io_q[0]
         process.state = 'READY'
         process.ready_begin_t = t
