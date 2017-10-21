@@ -48,12 +48,12 @@ def arrive(processes, ready_q, t, srt=False, running_p=None, stat=None):
                                                           running_p.proc_id,
                                                           print_queue(ready_q,
                                                                       process)))
+                    stat[3] += 1
+                    stat[4] += 1
                 else:
                     print('time {}ms: Process {} arrived and added to '
                           'ready queue {}'.format(t, process.proc_id
                                                   , print_queue(ready_q)))
-                    stat[3] += 1
-                    stat[4] += 1
             else:
                 print('time {}ms: Process {} arrived and added to '
                       'ready queue {}'.format(t, process.proc_id
@@ -76,12 +76,12 @@ def io_arrive(io_q, ready_q, t, srt=False, running_p=None, stat=None):
                                                       running_p.proc_id,
                                                       print_queue(ready_q,
                                                                   process)))
+                stat[3] += 1
+                stat[4] += 1
             else:
                 print('time {}ms: Process {} completed I/O;'
                       ' added to ready queue {}'.format(t, process.proc_id
                                                         , print_queue(ready_q)))
-                stat[3] += 1
-                stat[4] += 1
                 return_v = True
         else:
             io_q.pop(0)
@@ -309,6 +309,7 @@ if __name__ == "__main__":
     cpu_free = True
     t = 0
     start_t = -1
+    slice_start = -1
     end_t = -1
     running_p = None
     preemption = True
