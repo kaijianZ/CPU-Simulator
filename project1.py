@@ -149,7 +149,8 @@ def update(ready_q, running_p):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        sys.stderr.write('ERROR: Invalid arguments\nUSAGE: ./a.out <input-file> <stats-output-file>')
+        sys.stderr.write(
+            'ERROR: Invalid arguments\nUSAGE: ./a.out <input-file> <stats-output-file>')
         exit(1)
     file_name = sys.argv[1]
     with open(file_name, 'r') as f:
@@ -298,7 +299,7 @@ if __name__ == "__main__":
         if running_p is not None and len(ready_queue) \
                 and ready_queue[
                     0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
-            running_p.wait -= int(t_cs / 2)
+            running_p.wait -= t_cs
             ready_queue.append(running_p)
             running_p.state = 'READY'
             ready_queue.sort(key=lambda x: x.remaining_t)
