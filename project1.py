@@ -294,6 +294,7 @@ if __name__ == "__main__":
     cpu_free = True
     t = 0
     start_t = -1
+    slice_start = 0
     end_t = -1
     running_p = None
     preemption = True
@@ -309,8 +310,8 @@ if __name__ == "__main__":
     while len(processes_RR):
 
         # preemption for RR
-        if t - start_t == t_slice and running_p is not None:
-            start_t = t
+        if (t - start_t == t_slice or t - slice_start == t_slice) and running_p is not None:
+            slice_start = t
             if len(ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
                 preemption = True
                 stat[4] += 1
@@ -346,7 +347,6 @@ if __name__ == "__main__":
 
         arrive(processes_RR, ready_queue, t)
 
-
         if cpu_free and len(ready_queue):
             running_p = ready_queue[0]
             ready_queue.pop(0)
@@ -356,6 +356,7 @@ if __name__ == "__main__":
                 start_t = start_t + int(t_cs / 2)
             else:
                 start_t = t + int(t_cs / 2)
+            slice_start = start_t
 
         if start_t == t:
             if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
