@@ -28,7 +28,7 @@ def print_queue(ready_q):
 
 def arrive(processes, ready_q, t, srt=False):
     for process in processes:
-        if process.arr_t == t:
+        if process.arr_t == t and process not in ready_q:
             ready_q.append(process)
             if srt:
                 ready_q.sort(key=lambda x: x.remaining_t)
@@ -122,22 +122,6 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for FCFS {}'.format(t, print_queue(
         ready_queue)))
     while len(processes):
-        arrive(processes, ready_queue, t)
-
-        if running_p is None and len(ready_queue):
-            running_p = ready_queue[0]
-            stat[0].append(running_p.burst_t)
-            ready_queue.pop(0)
-            stat[1].append(running_p.wait_t(t))
-            stat[3] += 1
-            start_t = t + int(t_cs / 2)
-
-        if start_t == t:
-            print('time {}ms: Process {} started'
-                  ' using the CPU {}'.format(t, running_p.proc_id
-                                             , print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
-
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
@@ -162,6 +146,22 @@ if __name__ == "__main__":
             running_p = None
             end_t = -1
             continue
+
+        arrive(processes, ready_queue, t)
+
+        if running_p is None and len(ready_queue):
+            running_p = ready_queue[0]
+            stat[0].append(running_p.burst_t)
+            ready_queue.pop(0)
+            stat[1].append(running_p.wait_t(t))
+            stat[3] += 1
+            start_t = t + int(t_cs / 2)
+
+        if start_t == t:
+            print('time {}ms: Process {} started'
+                  ' using the CPU {}'.format(t, running_p.proc_id
+                                             , print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
 
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
@@ -197,30 +197,6 @@ if __name__ == "__main__":
         ready_queue)))
 
     while len(processes):
-        arrive(processes, ready_queue, t)
-
-        if running_p is None and len(ready_queue):
-            running_p = ready_queue.pop(0)
-            stat[0].append(running_p.burst_t)
-            stat[1].append(running_p.wait_t(t))
-            stat[3] += 1
-            start_t = t + int(t_cs / 2)
-
-        if running_p is not None and len(ready_queue) and ready_queue[
-            0].remaining_t < running_p.remaining_t:
-            ready_queue.append(running_p)
-            running_p.state = 'READY'
-            running_p = ready_queue.pop(0)
-            ready_queue.sort(key=lambda x: x.remaining_t)
-            start_t = t + t_cs
-
-
-        if start_t == t:
-            print('time {}ms: Process {} started'
-                  ' using the CPU {}'.format(t, running_p.proc_id
-                                             , print_queue(ready_queue)))
-            running_p.state = 'RUNNING'
-
         if running_p is not None \
                 and running_p.remaining_t == 0:
             running_p.num_bursts -= 1
@@ -245,6 +221,30 @@ if __name__ == "__main__":
             running_p = None
             end_t = -1
             continue
+
+        arrive(processes, ready_queue, t)
+
+        if running_p is None and len(ready_queue):
+            running_p = ready_queue.pop(0)
+            stat[0].append(running_p.burst_t)
+            stat[1].append(running_p.wait_t(t))
+            stat[3] += 1
+            start_t = t + int(t_cs / 2)
+
+        if running_p is not None and len(ready_queue) and ready_queue[
+            0].remaining_t < running_p.remaining_t\
+                and running_p.state == 'RUNNING':
+            ready_queue.append(running_p)
+            running_p.state = 'READY'
+            running_p = ready_queue.pop(0)
+            ready_queue.sort(key=lambda x: x.remaining_t)
+            start_t = t + t_cs
+
+        if running_p is not None and start_t == t:
+            print('time {}ms: Process {} started'
+                  ' using the CPU {}'.format(t, running_p.proc_id
+                                             , print_queue(ready_queue)))
+            running_p.state = 'RUNNING'
 
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
