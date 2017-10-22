@@ -11,8 +11,8 @@ import sys
 class Process(object):
     def __init__(self, info):
         self.proc_id = info[0]
-        self.arr_t, self.burst_t, self.num_bursts, self.io_t = map(int,
-                                                                   info[1:])
+        self.arr_t, self.burst_t, self.num_bursts, self.io_t = \
+            map(int, info[1:])
         self.state = 'READY'
         self.end_t = -1
         self.original_num_bursts = self.num_bursts
@@ -45,33 +45,28 @@ def arrive(processes, ready_q, t):
     processes_ = sorted(list(filter(lambda x: x.arr_t == t, processes)),
                         key=lambda x: x.proc_id)
     for process in processes_:
-        if process.arr_t == t:
-            ready_q.append(process)
-            print('time {}ms: Process {} arrived and added to '
-                  'ready queue {}'.format(t, process.proc_id
-                                          , queue_to_str(ready_q)))
+        ready_q.append(process)
+        print(
+            'time {}ms: Process {} arrived and added to ready queue {}'.format(
+                t, process.proc_id, queue_to_str(ready_q)))
 
 
 def io_arrive(io_queue, ready_q, t):
-    return_v = False
     io_q = []
     while len(io_queue) and io_queue[0].end_t == t:
         io_q.append(io_queue.pop(0))
     io_q.sort(key=lambda x: x.proc_id)
     while len(io_q):
-        process = io_q[0]
+        process = io_q.pop(0)
         process.state = 'READY'
         process.ready_begin_t = t
         ready_q.append(process)
-        io_q.pop(0)
         print('time {}ms: Process {} completed I/O;'
               ' added to ready queue {}'.format(t, process.proc_id
                                                 , queue_to_str(ready_q)))
-        return_v = True
-    return return_v
 
 
-def finish_process(io_q, ready_q, t, running_p, t_cs, srt=False):
+def finish_process(io_q, ready_q, t, running_p, t_cs):
     def s(x):
         return 's' if x != 1 else ''
 
@@ -94,8 +89,6 @@ def finish_process(io_q, ready_q, t, running_p, t_cs, srt=False):
         running_p.ready_begin_t = t
         running_p.state = 'READY'
         ready_q.append(running_p)
-        if srt:
-            ready_q.sort(key=lambda x: x.remaining_t)
 
 
 def write_stat(output, status):
@@ -104,10 +97,8 @@ def write_stat(output, status):
                  '-- average turnaround time: {:.2f} ms\n'
                  '-- total number of context switches: {:d}\n'
                  '-- total number of preemptions: {:d}\n'.format(
-        sum(status[0]) / len(status[0]),
-        sum(status[1]) / len(status[1]),
-        sum(status[2]) / len(status[2]),
-        status[3], status[4]))
+        sum(status[0]) / len(status[0]), sum(status[1]) / len(status[1]),
+        sum(status[2]) / len(status[2]), status[3], status[4]))
 
 
 def update(ready_q, running_p):
@@ -120,7 +111,8 @@ def update(ready_q, running_p):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         sys.stderr.write(
-            'ERROR: Invalid arguments\nUSAGE: ./a.out <input-file> <stats-output-file>')
+            'ERROR: Invalid arguments\nUSAGE: ./a.out'
+            ' <input-file> <stats-output-file>')
         exit(1)
     file_name = sys.argv[1]
     with open(file_name, 'r') as f:
@@ -160,6 +152,11 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for FCFS {}'.format(t, queue_to_str(
         ready_queue)))
     while len(processes):
+        if end_t == t:
+            cpu_free = True
+            running_p = None
+            end_t = -1
+
         if start_t == t and running_p.state != "RUNNING":
             print('time {}ms: Process {} started'
                   ' using the CPU {}'.format(t, running_p.proc_id
@@ -188,12 +185,6 @@ if __name__ == "__main__":
             stat[3] += 1
             cpu_free = False
             start_t = t + int(t_cs / 2)
-
-        if end_t == t:
-            cpu_free = True
-            running_p = None
-            end_t = -1
-            continue
 
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
@@ -224,26 +215,21 @@ if __name__ == "__main__":
 
 
     def arrive_srt(processes, ready_q, t, running_p=None, stat=None):
-        processes.sort(key=lambda x: x.proc_id)
+        processes.sort(key=lambda x: (x.remaining_t, x.proc_id))
         processes_ = list(filter(lambda x: x.arr_t == t, processes))
         for process in processes_:
             ready_q.append(process)
-            ready_q.sort(key=lambda x: x.remaining_t)
-            if running_p is not None and \
-                            process.remaining_t < running_p.remaining_t \
-                    and running_p.state == 'RUNNING' and process == \
-                    sorted(processes_, key=lambda x: x.remaining_t)[
-                        0]:
+            ready_q.sort(key=lambda x: (x.remaining_t, x.proc_id))
+            if running_p is not None and process.remaining_t < \
+                    running_p.remaining_t and running_p.state == \
+                    'RUNNING' and process == processes_[0]:
                 process.next = True
                 for i in ready_q:
                     if i != process:
                         i.next = False
-                print('time {}ms: Process {} arrived '
-                      'and will preempt {} {}'.format(t,
-                                                      process.proc_id,
-                                                      running_p.proc_id,
-                                                      queue_to_str(
-                                                          ready_q)))
+                print('time {}ms: Process {} arrived and will preempt {}'
+                      ' {}'.format(t, process.proc_id, running_p.proc_id,
+                                   queue_to_str(ready_q)))
                 stat[4] += 1
             else:
                 print('time {}ms: Process {} arrived and added to '
@@ -252,24 +238,20 @@ if __name__ == "__main__":
 
 
     def io_arrive_srt(io_queue, ready_q, t, running_p=None, stat=None):
-        return_v = False
         io_q = []
         while len(io_queue) and io_queue[0].end_t == t:
             io_q.append(io_queue.pop(0))
         io_q.sort(key=lambda x: x.proc_id)
         io_q_remaining = sorted(io_q, key=lambda x: x.remaining_t)
         while len(io_q):
-            process = io_q[0]
+            process = io_q.pop(0)
             process.state = 'READY'
             process.ready_begin_t = t
             ready_q.append(process)
-            ready_q.sort(key=lambda x: x.remaining_t)
-            io_q.pop(0)
-            if running_p is not None and \
-                            process.remaining_t < running_p.remaining_t \
-                    and running_p.state == 'RUNNING' and process == \
-                    io_q_remaining[
-                        0]:
+            ready_q.sort(key=lambda x: (x.remaining_t, x.proc_id))
+            if running_p is not None and process.remaining_t < \
+                    running_p.remaining_t and running_p.state == \
+                    'RUNNING' and process == io_q_remaining[0]:
                 process.next = True
                 for i in ready_q:
                     if i != process:
@@ -281,15 +263,16 @@ if __name__ == "__main__":
                                                           ready_q[1:])))
                 stat[4] += 1
             else:
-                print('time {}ms: Process {} completed I/O;'
-                      ' added to ready queue {}'.format(t, process.proc_id
-                                                        , queue_to_str(
-                        ready_q)))
-            return_v = True
-        return return_v
+                print('time {}ms: Process {} completed I/O; added to ready'
+                      ' queue {}'.format(t, process.proc_id,
+                                         queue_to_str(ready_q)))
 
 
     while len(processes_SRT):
+        if end_t == t:
+            running_p = None
+            end_t = -1
+
         if start_t == t and running_p.state != "RUNNING":
             if running_p.remaining_t == running_p.burst_t:
                 print('time {}ms: Process {} started'
@@ -313,7 +296,7 @@ if __name__ == "__main__":
                 processes_SRT.remove(running_p)
                 running_p.remaining_t = -1
             else:
-                finish_process(io_queue, ready_queue, t, running_p, t_cs, True)
+                finish_process(io_queue, ready_queue, t, running_p, t_cs)
 
             end_t = t + int(t_cs / 2)
 
@@ -326,19 +309,14 @@ if __name__ == "__main__":
             stat[3] += 1
             start_t = t + int(t_cs / 2)
 
-        if running_p is not None and len(ready_queue) \
-                and ready_queue[
-                    0].remaining_t < running_p.remaining_t and running_p.state == 'RUNNING':
+        if running_p is not None and len(ready_queue) and \
+                ready_queue[0].remaining_t < running_p.remaining_t \
+                and running_p.state == 'RUNNING':
             running_p.wait -= t_cs
             ready_queue.append(running_p)
             running_p.state = 'READY'
             ready_queue.sort(key=lambda x: x.remaining_t)
             end_t = t + int(t_cs / 2)
-
-        if end_t == t:
-            running_p = None
-            end_t = -1
-            continue
 
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
@@ -371,6 +349,11 @@ if __name__ == "__main__":
     print('time {}ms: Simulator started for RR {}'.format(t, queue_to_str(
         ready_queue)))
     while len(processes_RR):
+        if end_t == t:
+            cpu_free = True
+            running_p = None
+            end_t = -1
+
         if start_t == t and running_p.state != "RUNNING":
             if running_p.remaining_t == running_p.burst_t and running_p.state != 'BLOCKED':
                 print('time {}ms: Process {} started'
@@ -384,29 +367,26 @@ if __name__ == "__main__":
             running_p.state = 'RUNNING'
 
         # preemption for RR
-        if (
-                            t - start_t == t_slice or t - slice_start == t_slice) and running_p is not None:
+        if (t - start_t == t_slice or t - slice_start == t_slice) \
+                and running_p is not None:
             slice_start = t
-            if len(
-                    ready_queue) and running_p.remaining_t > 0 and running_p.state != 'BLOCKED':
+            if len(ready_queue) and running_p.remaining_t > 0 \
+                    and running_p.state != 'BLOCKED':
                 preemption = True
                 stat[4] += 1
-                print('time {}ms: Time slice expired; process {} '
-                      'preempted with {}ms to go {}'.format(t,
-                                                            running_p.proc_id,
-                                                            running_p.remaining_t,
-                                                            queue_to_str(
-                                                                ready_queue)))
+                print('time {}ms: Time slice expired; process {} preempted'
+                      ' with {}ms to go {}'.format(t, running_p.proc_id,
+                                                   running_p.remaining_t,
+                                                   queue_to_str(ready_queue)))
                 running_p.state = 'READY'
                 ready_queue.append(running_p)
                 cpu_free = True
                 start_t = t + int(t_cs / 2)
             elif running_p.remaining_t > 0:
                 preemption = False
-                print('time {}ms: Time slice expired; '
-                      'no preemption because ready queue is empty {}'.format(t,
-                                                                             queue_to_str(
-                                                                                 ready_queue)))
+                print('time {}ms: Time slice expired; no preemption because'
+                      ' ready queue is empty {}'.format(t, queue_to_str(
+                    ready_queue)))
 
         if running_p is not None \
                 and running_p.remaining_t == 0:
@@ -435,12 +415,6 @@ if __name__ == "__main__":
             else:
                 start_t = t + int(t_cs / 2)
             slice_start = start_t
-
-        if end_t == t:
-            cpu_free = True
-            running_p = None
-            end_t = -1
-            continue
 
         if running_p is not None and running_p.state == 'RUNNING':
             running_p.remaining_t -= 1
